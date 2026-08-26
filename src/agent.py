@@ -1,6 +1,7 @@
 import operator
 from typing import Annotated, Literal, Optional
 
+from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.memory import MemorySaver
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 from .models import ExtractedLead
 from .prompts import EXTRACTION_PROMPT, PROPOSAL_PROMPT, SYSTEM_PROMPT
 from .state import LeadInfo, LeadState
+
+load_dotenv()
 
 
 def _make_llm():
