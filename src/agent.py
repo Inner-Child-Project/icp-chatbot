@@ -145,7 +145,15 @@ async def submit_lead_node(state: LeadState) -> dict:
 
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.post(webhook_url, json=payload, timeout=10)
+            resp = await client.post(
+                webhook_url,
+                json=payload,
+                timeout=10,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+                    "Accept": "application/json",
+                },
+            )
             submitted = resp.status_code == 200
     except Exception:
         submitted = False
