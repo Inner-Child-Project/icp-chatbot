@@ -1,5 +1,6 @@
 import operator
 import re
+import json
 from typing import Annotated, Literal, Optional
 
 from dotenv import load_dotenv
@@ -34,8 +35,20 @@ extraction_llm = llm.with_structured_output(ExtractedLead)
 
 
 async def chat_node(state: LeadState) -> dict:
+    info = state.get("lead_info") or {}
+    collected = {k: v for k, v in info.items() if v}
+    missing = [f for f in ("name", "email", "problem_description") if not info.get(f)]
+
+    context_parts = []
+    if collected:
+        context_parts.append(f"Collected so far: {json.dumps(collected, ensure_ascii=False)}")
+    if missing:
+        context_parts.append(f"Still need: {', '.join(missing)}")
+
+    context = "\n".join(context_parts) if context_parts else ""
+
     response = await llm.ainvoke([
-        SystemMessage(content=SYSTEM_PROMPT),
+        SystemMessage(content=SYSTEM_PROMPT + ("\n\n" + context if context else "")),
         *state["messages"],
     ])
     return {"messages": [response]}
