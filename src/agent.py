@@ -6,7 +6,6 @@ from typing import Annotated, Literal, Optional
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel
@@ -196,6 +195,17 @@ def route_after_review(state: LeadState) -> Literal["submit_lead", "chat_node"]:
     return "chat_node"
 
 
+def _make_checkpointer():
+    import os
+    import sqlite3
+
+    from langgraph.checkpoint.sqlite import SqliteSaver
+
+    db_path = os.getenv("CHECKPOINT_DB", "checkpoints.db")
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    return SqliteSaver(conn)
+
+
 def build_graph():
     builder = StateGraph(LeadState)
 
@@ -220,5 +230,4 @@ def build_graph():
     )
     builder.add_edge("submit_lead", END)
 
-    memory = MemorySaver()
-    return builder.compile(checkpointer=memory)
+    return builder.compile(checkpointer=_make_checkpointer())

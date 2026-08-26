@@ -3,5 +3,17 @@ services:
     build: .
     ports:
       - "8100:8100"
-    env_file: .env
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-true}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-icp-chatbot}
+      - N8N_LEAD_WEBHOOK_URL=${N8N_LEAD_WEBHOOK_URL}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://products.innerchildproject.us,http://localhost:4321}
+    volumes:
+      - chatbot-data:/app/data
     restart: unless-stopped
+
+volumes:
+  chatbot-data:

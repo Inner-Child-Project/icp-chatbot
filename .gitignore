@@ -6,3 +6,5 @@ venv/
 *.egg-info/
 dist/
 .ruff_cache/
+checkpoints.db
+*.db
