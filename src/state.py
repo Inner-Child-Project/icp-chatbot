@@ -1,6 +1,6 @@
 from typing_extensions import TypedDict, Annotated
 from typing import Optional
-import operator
+from langgraph.graph.message import add_messages
 
 
 class LeadInfo(TypedDict, total=False):
@@ -14,7 +14,7 @@ class LeadInfo(TypedDict, total=False):
 
 
 class LeadState(TypedDict):
-    messages: Annotated[list, operator.add]
+    messages: Annotated[list, add_messages]
     lead_info: LeadInfo
     info_complete: bool
     proposal: str

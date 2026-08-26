@@ -1,4 +1,5 @@
 import operator
+import re
 from typing import Annotated, Literal, Optional
 
 from dotenv import load_dotenv
@@ -54,6 +55,9 @@ async def extract_info_node(state: LeadState) -> dict:
     current = dict(state.get("lead_info") or {})
     for field in ("name", "email", "phone", "business_type", "problem_description", "urgency", "budget_range"):
         val = getattr(result, field, None)
+        # Normalize LLM "null"/"none"/"" strings to None (models often return the literal string)
+        if isinstance(val, str) and val.strip().lower() in ("null", "none", ""):
+            val = None
         if val and not current.get(field):
             current[field] = val
 
@@ -85,20 +89,35 @@ async def review_proposal_node(state: LeadState) -> dict:
     """Interrupt: pause here until the user approves or requests changes."""
     feedback = interrupt({
         "question": "Are you satisfied with this proposal?",
+        "proposal": state.get("proposal", ""),
     })
 
     feedback_lower = str(feedback).lower().strip()
+
+    # Negative signals take priority — "no, add X" is a rejection even if it
+    # contains a substring like "ok" (e.g. inside "booking").
+    negative_signals = [
+        "no", "not", "don't", "dont", "change", "adjust", "add", "different",
+        "more", "instead", "revision", "fix", "update", "actually", "rather",
+    ]
     positive_signals = [
-        "yes", "yeah", "yep", "yup", "ok", "okay", "sure",
-        "good", "great", "perfect", "love", "sounds good", "go ahead", "approved",
+        "yes", "yeah", "yep", "yup", "ok", "okay", "sure", "good", "great",
+        "perfect", "love", "approved", "proceed", "go ahead", "sounds good",
     ]
 
-    if any(w in feedback_lower for w in positive_signals):
+    def has_word(text, word):
+        return re.search(rf"\b{re.escape(word)}\b", text) is not None
+
+    has_negative = any(has_word(feedback_lower, w) for w in negative_signals)
+    has_positive = any(has_word(feedback_lower, w) for w in positive_signals)
+
+    if has_positive and not has_negative:
         return {"proposal_approved": True}
 
     return {
         "proposal_approved": False,
         "info_complete": False,
+        "proposal": "",
         "messages": [HumanMessage(content=str(feedback))],
     }
 
@@ -138,26 +157,10 @@ async def submit_lead_node(state: LeadState) -> dict:
     return {"submitted": submitted, "messages": [confirmation]}
 
 
-def route_after_chat(state: LeadState) -> Literal["extract_info", "__end__"]:
-    messages = state.get("messages", [])
-    if not messages or len(messages) > 30:
-        return "__end__"
-    last = messages[-1]
-    if isinstance(last, AIMessage):
-        return "__end__"
-    return "extract_info"
-
-
-def route_after_extract(state: LeadState) -> Literal["generate_proposal", "__end__"]:
-    if state.get("info_complete"):
+def route_after_extract(state: LeadState) -> Literal["generate_proposal", "end"]:
+    if state.get("info_complete") and not state.get("proposal"):
         return "generate_proposal"
-    return "__end__"
-
-
-def route_after_proposal(state: LeadState) -> Literal["review_proposal", "__end__"]:
-    if state.get("proposal"):
-        return "review_proposal"
-    return "__end__"
+    return "end"
 
 
 def route_after_review(state: LeadState) -> Literal["submit_lead", "chat_node"]:
@@ -176,10 +179,18 @@ def build_graph():
     builder.add_node("submit_lead", submit_lead_node)
 
     builder.add_edge(START, "chat_node")
-    builder.add_conditional_edges("chat_node", route_after_chat, ["extract_info", "__end__"])
-    builder.add_conditional_edges("extract_info", route_after_extract, ["generate_proposal"])
+    builder.add_edge("chat_node", "extract_info")
+    builder.add_conditional_edges(
+        "extract_info",
+        route_after_extract,
+        {"generate_proposal": "generate_proposal", "end": END},
+    )
     builder.add_edge("generate_proposal", "review_proposal")
-    builder.add_conditional_edges("review_proposal", route_after_review, ["submit_lead", "chat_node"])
+    builder.add_conditional_edges(
+        "review_proposal",
+        route_after_review,
+        {"submit_lead": "submit_lead", "chat_node": "chat_node"},
+    )
     builder.add_edge("submit_lead", END)
 
     memory = MemorySaver()
