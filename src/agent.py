@@ -150,10 +150,16 @@ async def submit_lead_node(state: LeadState) -> dict:
     except Exception:
         submitted = False
 
-    confirmation = AIMessage(content=(
-        "✅ All done! Your information has been sent to our team. "
-        "Expect a call or email within one business day. Thanks for reaching out!"
-    ))
+    if submitted:
+        confirmation = AIMessage(content=(
+            "✅ All done! Your information has been sent to our team. "
+            "Expect a call or email within one business day. Thanks for reaching out!"
+        ))
+    else:
+        confirmation = AIMessage(content=(
+            "Thanks for sharing your details! A team member will follow up with you shortly. "
+            "If you'd like to reach us right away, email hello@innerchildproject.us."
+        ))
     return {"submitted": submitted, "messages": [confirmation]}
 
 
