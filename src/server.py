@@ -13,10 +13,13 @@ load_dotenv()
 
 app = FastAPI(title="ICP Chatbot", version="0.2.0")
 
+_cors_raw = os.getenv("CORS_ORIGINS", "").strip()
+_cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
-    allow_methods=["POST"],
+    allow_origins=_cors_origins,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
