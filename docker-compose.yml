@@ -9,11 +9,17 @@ services:
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-true}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-icp-chatbot}
-      - N8N_LEAD_WEBHOOK_URL=${N8N_LEAD_WEBHOOK_URL}
+      - N8N_LEAD_WEBHOOK_URL=${N8N_LEAD_WEBHOOK_URL:-http://n8n:5678/webhook/icp-lead}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://products.innerchildproject.us,http://localhost:4321}
     volumes:
       - chatbot-data:/app/data
+    networks:
+      - icp-net
     restart: unless-stopped
 
 volumes:
   chatbot-data:
+
+networks:
+  icp-net:
+    external: true
