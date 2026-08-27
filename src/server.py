@@ -1,5 +1,6 @@
 import os
 import uuid
+from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -11,10 +12,20 @@ from .models import ChatRequest, ChatResponse
 
 load_dotenv()
 
-app = FastAPI(title="ICP Chatbot", version="0.2.0")
-
 _cors_raw = os.getenv("CORS_ORIGINS", "").strip()
 _cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else ["*"]
+
+graph = None
+
+
+@asynccontextmanager
+async def lifespan(app):
+    global graph
+    graph = await build_graph()
+    yield
+
+
+app = FastAPI(title="ICP Chatbot", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,8 +33,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-graph = build_graph()
 
 
 def _last_ai_content(state: dict) -> str:

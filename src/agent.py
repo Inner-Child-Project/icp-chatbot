@@ -195,18 +195,18 @@ def route_after_review(state: LeadState) -> Literal["submit_lead", "chat_node"]:
     return "chat_node"
 
 
-def _make_checkpointer():
+async def _make_checkpointer():
     import os
-    import sqlite3
 
-    from langgraph.checkpoint.sqlite import SqliteSaver
+    import aiosqlite
+    from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
     db_path = os.getenv("CHECKPOINT_DB", "checkpoints.db")
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    return SqliteSaver(conn)
+    conn = await aiosqlite.connect(db_path)
+    return AsyncSqliteSaver(conn)
 
 
-def build_graph():
+async def build_graph():
     builder = StateGraph(LeadState)
 
     builder.add_node("chat_node", chat_node)
@@ -230,4 +230,4 @@ def build_graph():
     )
     builder.add_edge("submit_lead", END)
 
-    return builder.compile(checkpointer=_make_checkpointer())
+    return builder.compile(checkpointer=await _make_checkpointer())
