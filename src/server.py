@@ -3,17 +3,23 @@ import uuid
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from langgraph.types import Command
 
 from .agent import build_graph
 from .models import ChatRequest, ChatResponse
+from .security import SlidingWindowRateLimiter, client_ip
 
 load_dotenv()
 
 _cors_raw = os.getenv("CORS_ORIGINS", "").strip()
 _cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()] if _cors_raw else ["*"]
+
+_limiter = SlidingWindowRateLimiter(
+    limit=int(os.getenv("RATE_LIMIT", "20")),
+    window_seconds=int(os.getenv("RATE_LIMIT_WINDOW", "60")),
+)
 
 graph = None
 
@@ -43,7 +49,10 @@ def _last_ai_content(state: dict) -> str:
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
+async def chat(req: ChatRequest, request: Request) -> ChatResponse:
+    if not _limiter.allow(client_ip(request)):
+        raise HTTPException(status_code=429, detail="Too many requests")
+
     thread_id = req.thread_id or str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
 

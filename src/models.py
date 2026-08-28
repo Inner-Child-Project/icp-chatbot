@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ExtractedLead(BaseModel):
@@ -14,9 +14,9 @@ class ExtractedLead(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    message: str
-    thread_id: str
-    resume_value: Optional[str] = None
+    message: str = Field(default="", max_length=2000)
+    thread_id: str = Field(max_length=100)
+    resume_value: Optional[str] = Field(default=None, max_length=2000)
 
 
 class ChatResponse(BaseModel):
