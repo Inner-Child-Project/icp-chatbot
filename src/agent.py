@@ -178,7 +178,7 @@ async def submit_lead_node(state: LeadState) -> dict:
     else:
         confirmation = AIMessage(content=(
             "Thanks for sharing your details! A team member will follow up with you shortly. "
-            "If you'd like to reach us right away, email hello@innerchildproject.us."
+            "If you'd like to reach us right away, email hello@leadforge.innerchildproject.us."
         ))
     return {"submitted": submitted, "messages": [confirmation]}
 
