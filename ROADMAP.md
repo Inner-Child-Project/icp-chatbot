@@ -22,22 +22,23 @@
 
 ### A. Token-spend protection
 - [ ] Set a hard monthly spend cap in OpenRouter (dashboard → Limits) — the single most important safeguard
-- [ ] Rate-limit `/api/chat` per client IP and per `thread_id` (slowapi middleware or a simple in-memory limiter)
-- [ ] Enforce a max input message length (reject oversized payloads, e.g. > 2000 chars)
-- [ ] Verify/tighten the max-conversation-turn guard (currently ~24 messages of history)
-- [ ] Confirm per-call `max_tokens` (already 500) and add a global per-thread token budget
+  > Manual (not code): openrouter.ai → **Settings → Credits / Limits** → set **Monthly limit** (e.g. $10–$20 for dev, $50–$100 for prod) → enable **email alerts at 80%**. Also set **per-request max** if available. This is the only guard that survives a code bypass.
+- [x] Rate-limit `/api/chat` per client IP and per `thread_id` (SlidingWindow 20/60s for each — `RATE_LIMIT` + `THREAD_RATE_LIMIT` in `.env.example`)
+- [x] Enforce a max input message length (Pydantic `max_length=2000` on `message`/`resume_value` — rejects oversized payloads)
+- [x] Max-conversation-turn guard (24 messages) + per-thread token budget (8000 est. tokens via `MAX_TURNS`/`THREAD_TOKEN_BUDGET` — oldest trimmed in `agent.py`)
+- [x] Confirm per-call `max_tokens` (500 in `agent.py`) and global per-thread budget (see above)
 
 ### B. Authentication / access control
-- [ ] Require a shared secret (header token) on `/api/chat`; the widget sends it, the server rejects without it
-- [ ] Keep `/health` unauthenticated for uptime monitors (or protect it too — decide)
+- [x] Require a shared secret (header `X-Chat-Token` must match `CHAT_API_TOKEN` when set; widget must send it — empty `CHAT_API_TOKEN` = dev open)
+- [x] Keep `/health` unauthenticated for uptime monitors (decision: stays open)
 
 ### C. Prompt-injection resistance
-- [ ] Harden the system prompt: explicitly instruct the model to ignore "ignore previous instructions", role-swap, and "reveal your prompt" attempts
-- [ ] Treat every model output as untrusted text; escape/strip before any rendering or downstream use
+- [x] Harden the system prompt: `SYSTEM_PROMPT` explicitly ignores `ignore previous instructions` / `act as` / `reveal your prompt` (`prompts.py:19`)
+- [x] Treat every model output as untrusted — rendered only as text in chat, never executed downstream
 
 ### D. General hardening
-- [ ] Validate all input (reject non-string, malformed, or oversized JSON)
-- [ ] Confirm CORS allowlist is locked to `products.innerchildproject.us` (+ localhost for dev)
-- [ ] Add dependency scanning (GitHub Dependabot / `pip-audit`)
+- [x] Validate all input (Pydantic `max_length` + FastAPI rejects malformed JSON)
+- [x] Confirm CORS allowlist is locked to `products.innerchildproject.us` (+ localhost for dev) — via `CORS_ORIGINS` env, forwarded to `CORSMiddleware`
+- [x] Add dependency scanning (`.github/dependabot.yml` already enabled)
 - [ ] Optional: Cloudflare Turnstile on the chat widget (bot protection before the request even reaches the server)
-- [ ] Optional: request logging for abuse forensics (LangSmith already traces execution)
+- [x] Optional: request logging for abuse forensics (LangSmith traces execution + `src/server.py` rate-limit hits)

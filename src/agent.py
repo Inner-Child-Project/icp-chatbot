@@ -33,6 +33,22 @@ llm = _make_llm()
 extraction_llm = llm.with_structured_output(ExtractedLead)
 
 
+def _trim_messages(messages):
+    import os
+
+    max_messages = int(os.getenv("MAX_TURNS", "24"))
+    max_tokens = int(os.getenv("THREAD_TOKEN_BUDGET", "8000"))
+    trimmed = messages[-max_messages:] if len(messages) > max_messages else list(messages)
+
+    def est_tokens(m):
+        c = getattr(m, "content", "") or ""
+        return max(1, len(str(c)) // 4)
+
+    while len(trimmed) > 2 and sum(est_tokens(m) for m in trimmed) > max_tokens:
+        trimmed.pop(0)
+    return trimmed
+
+
 async def chat_node(state: LeadState) -> dict:
     info = state.get("lead_info") or {}
     collected = {k: v for k, v in info.items() if v}
@@ -46,17 +62,19 @@ async def chat_node(state: LeadState) -> dict:
 
     context = "\n".join(context_parts) if context_parts else ""
 
+    trimmed = _trim_messages(state.get("messages") or [])
     response = await llm.ainvoke([
         SystemMessage(content=SYSTEM_PROMPT + ("\n\n" + context if context else "")),
-        *state["messages"],
+        *trimmed,
     ])
     return {"messages": [response]}
 
 
 async def extract_info_node(state: LeadState) -> dict:
+    trimmed_for_extract = _trim_messages(state.get("messages") or [])
     convo_text = "\n".join(
         f"{'User' if isinstance(m, HumanMessage) else 'Assistant'}: {m.content}"
-        for m in state["messages"]
+        for m in trimmed_for_extract
         if m.content
     )
     result: ExtractedLead = await extraction_llm.ainvoke([

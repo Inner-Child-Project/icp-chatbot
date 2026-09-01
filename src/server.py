@@ -21,6 +21,14 @@ _limiter = SlidingWindowRateLimiter(
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW", "60")),
 )
 
+_thread_limiter = SlidingWindowRateLimiter(
+    limit=int(os.getenv("THREAD_RATE_LIMIT", os.getenv("RATE_LIMIT", "20"))),
+    window_seconds=int(os.getenv("THREAD_RATE_LIMIT_WINDOW", os.getenv("RATE_LIMIT_WINDOW", "60"))),
+)
+
+# Optional shared secret for /api/chat — if CHAT_API_TOKEN is set (non-empty), require X-Chat-Token header
+_CHAT_TOKEN = os.getenv("CHAT_API_TOKEN", "").strip()
+
 graph = None
 
 
@@ -50,10 +58,14 @@ def _last_ai_content(state: dict) -> str:
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest, request: Request) -> ChatResponse:
+    if _CHAT_TOKEN and request.headers.get("X-Chat-Token") != _CHAT_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if not _limiter.allow(client_ip(request)):
         raise HTTPException(status_code=429, detail="Too many requests")
 
     thread_id = req.thread_id or str(uuid.uuid4())
+    if not _thread_limiter.allow(thread_id):
+        raise HTTPException(status_code=429, detail="Too many requests for this thread")
     config = {"configurable": {"thread_id": thread_id}}
 
     if req.resume_value:

@@ -13,6 +13,11 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-https://products.innerchildproject.us,http://localhost:4321}
       - RATE_LIMIT=${RATE_LIMIT:-20}
       - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW:-60}
+      - THREAD_RATE_LIMIT=${THREAD_RATE_LIMIT:-20}
+      - THREAD_RATE_LIMIT_WINDOW=${THREAD_RATE_LIMIT_WINDOW:-60}
+      - MAX_TURNS=${MAX_TURNS:-24}
+      - THREAD_TOKEN_BUDGET=${THREAD_TOKEN_BUDGET:-8000}
+      - CHAT_API_TOKEN=${CHAT_API_TOKEN:-}
     volumes:
       - chatbot-data:/app/data
     networks:
