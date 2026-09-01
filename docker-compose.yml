@@ -10,7 +10,7 @@ services:
       - LANGSMITH_TRACING=${LANGSMITH_TRACING:-true}
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-icp-chatbot}
       - N8N_LEAD_WEBHOOK_URL=${N8N_LEAD_WEBHOOK_URL:-http://n8n:5678/webhook/icp-lead}
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://leadforge.innerchildproject.us,http://localhost:4321}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://products.innerchildproject.us,http://localhost:4321}
       - RATE_LIMIT=${RATE_LIMIT:-20}
       - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW:-60}
     volumes:
