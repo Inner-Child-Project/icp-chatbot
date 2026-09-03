@@ -10,6 +10,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 from pydantic import BaseModel
 
+from .jwt import sign_jwt
 from .models import ExtractedLead
 from .prompts import EXTRACTION_PROMPT, PROPOSAL_PROMPT, SYSTEM_PROMPT
 from .state import LeadInfo, LeadState
@@ -158,7 +159,8 @@ async def submit_lead_node(state: LeadState) -> dict:
 
     info = state.get("lead_info", {})
     webhook_url = os.getenv("N8N_LEAD_WEBHOOK_URL", "")
-    if not webhook_url:
+    secret = os.getenv("N8N_LEAD_WEBHOOK_SECRET", "")
+    if not webhook_url or not secret:
         return {"submitted": False}
 
     payload = {
@@ -173,6 +175,8 @@ async def submit_lead_node(state: LeadState) -> dict:
         "urgency": info.get("urgency", ""),
     }
 
+    token = sign_jwt(secret=secret, sub="chatbot")
+
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
@@ -182,6 +186,7 @@ async def submit_lead_node(state: LeadState) -> dict:
                 headers={
                     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
                     "Accept": "application/json",
+                    "Authorization": f"Bearer {token}",
                 },
             )
             submitted = resp.status_code == 200
