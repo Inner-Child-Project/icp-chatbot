@@ -107,8 +107,8 @@ async def generate_proposal_node(state: LeadState) -> dict:
     proposal_text = response.content
     confirmation = AIMessage(content=(
         f"{proposal_text}\n\n"
-        "Does this look right to you? Reply **yes** to proceed, "
-        "or tell me what you'd like me to adjust."
+        "Does this look right to you? You can approve it, "
+        "or tell me what you'd like to adjust."
     ))
     return {
         "proposal": proposal_text,
