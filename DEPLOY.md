@@ -1,6 +1,6 @@
 # Deploy the ICP Chatbot
 
-The chatbot is a **LangGraph + FastAPI** service. It runs alongside n8n on your server, exposed at `chat.innerchildproject.us` via Cloudflare Tunnel.
+The chatbot is a **LangGraph + FastAPI** service. It runs alongside n8n on your server, exposed at `chatbot.innerchildproject.us` via Cloudflare Tunnel.
 
 ## Prerequisites
 
@@ -34,7 +34,7 @@ curl http://localhost:8100/health
 Add a route for the chatbot on your existing tunnel (or a new one):
 
 ```bash
-cloudflared tunnel route dns <TUNNEL_NAME> chat.innerchildproject.us
+cloudflared tunnel route dns <TUNNEL_NAME> chatbot.innerchildproject.us
 ```
 
 Then edit your tunnel config (`~/.cloudflared/config.yml`) to add:
@@ -44,7 +44,7 @@ tunnel: <TUNNEL_ID>
 credentials-file: /home/<user>/.cloudflared/<TUNNEL_ID>.json
 
 ingress:
-  - hostname: chat.innerchildproject.us
+  - hostname: chatbot.innerchildproject.us
     service: http://localhost:8100
   - hostname: n8n.innerchildproject.us
     service: http://localhost:5678        # your existing n8n route
@@ -59,25 +59,25 @@ sudo systemctl restart cloudflared
 
 ## Step 4 — Point the landing page at it
 
-In the `funnel-machine` repo's Cloudflare build variables, set:
+In the `main-webpage` repo (Growbusy site), set in `.env`:
 
 ```
-PUBLIC_CHAT_API_URL = https://chat.innerchildproject.us
+PUBLIC_CHAT_API_URL = https://chatbot.innerchildproject.us
 ```
 
-(Or the widget already defaults to that URL in `ChatWidget.astro`.)
+(The chat widget falls back to that URL by default in `src/config/chat.ts`.)
 
 ## Verify end-to-end
 
 ```bash
 # 1. Health
-curl https://chat.innerchildproject.us/health
+curl https://chatbot.innerchildproject.us/health
 
 # 2. Chat
-curl -X POST https://chat.innerchildproject.us/api/chat \
+curl -X POST https://chatbot.innerchildproject.us/api/chat \
   -H 'Content-Type: application/json' \
   -d '{"message": "I run a med spa and need more bookings", "thread_id": "prod-test"}'
 # → should return a lead-qualification question
 ```
 
-Then open `products.innerchildproject.us`, click the 💬 bubble, and talk to the bot.
+Then open `growbusy.net`, click the 💬 bubble, and talk to the bot.
