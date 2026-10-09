@@ -1,0 +1,8 @@
+# SOPS policy: which age recipients may decrypt matching files.
+# Recipients = access control. Add a keypair per admin/machine, then
+# `sops updatekeys <file>`. Owner key lives in ~/.config/sops/age/keys.txt (600).
+creation_rules:
+  - path_regex: \.env\.sops$
+    input_type: dotenv
+    output_type: dotenv
+    age: age1ezz8uf4q6kegqv660xxtfku4wyej2k685v2ud94gt7s9y9yjs92qpvxl6p

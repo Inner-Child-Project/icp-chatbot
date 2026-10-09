@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Pre-commit gate: refuse plaintext secrets. Install with:
+#   cp scripts/git-hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Blocks: any *.env* file (except *.env.sops / .env.example) without SOPS
+# markers, and any staged file with secret-shaped content (case-insensitive)
+# lacking a sops marker — unless it only mentions example/placeholder/TODO.
+set -euo pipefail
+
+fail=0
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+for f in $staged; do
+  case "$f" in
+    *.env.sops|.env.example) continue;;
+    *.env*)
+      if ! grep -qE '^sops_|ENC\[AES256_GCM' "$f" 2>/dev/null; then
+        echo "BLOCKED: $f looks like a plaintext env file — encrypt with sops first"
+        fail=1
+      fi
+      continue;;
+  esac
+  if grep -qiE '(password|secret|token|api_key|private_key|client_secret|encryption_key|access_key)["'\'']?\s*[:=]\s*["'\'']?[A-Za-z0-9+/=_.-]{8,}' "$f" 2>/dev/null; then
+    if ! grep -qE 'sops:|ENC\[AES256_GCM|age1[A-Za-z0-9]+' "$f" 2>/dev/null; then
+      if ! grep -qiE 'example|placeholder|your-|<.*>|TODO|SECURITY.md|hook test' "$f" 2>/dev/null; then
+        echo "BLOCKED: $f contains secret-shaped content without sops marker"
+        fail=1
+      fi
+    fi
+  fi
+done
+
+exit $fail
